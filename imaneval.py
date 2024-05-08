@@ -25,3 +25,31 @@ def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='C
     
     
     """
+    df_return = df.copy()
+    df_return['year'] = df_return.index.year.astype('string')
+    df_return['month'] = df_return.index.month.astype('string')
+    df_return['month'] = df_return['month'].str.zfill(2)  # zero pad
+    df_return['year_mo'] = df_return['year'] + '-' + df_return['month']
+    
+    # build date column, make it the index, drop the extra data column
+    df_return['day'] = df_return.index.day
+    df_return['date'] = df_return.index.date
+    df_return.index = df_return['date']
+    df_return.drop(['date'], axis=1, inplace=True)
+    
+    # convert index from datetime to string so we can join on it
+    df_return.index = df_return.index.astype('string')
+    df_price = df_return[[price_col, 'day', 'year_mo']]
+    
+    # find the last trading day of the month
+    df_id_eom = df_price.groupby('year_mo')['day'].max('day')
+    df_id_eom = pd.DataFrame(df_id_eom)
+    df_id_eom['date'] = df_id_eom.index + '-' + df_id_eom['day'].astype('string').str.zfill(2)
+    
+    # use df_id_oem to filter out all but last trading day of month
+    df_eom = df_price.merge(df_id_eom, on='date')
+    df_eom = df_eom[['date', price_col]]
+    
+    # filter between start_month and end_month TODO
+    
+    return(df_eom)
