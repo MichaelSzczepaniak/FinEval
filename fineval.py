@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime as dt
 import yfinance as yfinance
 
 def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='Close'):
@@ -10,13 +11,14 @@ def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='C
     
     Args:
     df (pandas.core.frame.DataFrame): dataframe of daily prices for a security
-        with at least 2 columns: Date and whatever is designated by the
-        price_col parameter
+        with at least 2 columns: an index which is a pandas Timestamp (i.e.
+        pandas._libs.tslibs.timestamps.Timestamp) and a price that is designated
+        by the price_col
     start_month (str): month of the form yyyy-mm designating the first month of
         of prices to be returned
     end_month (str): month of the form yyyy-mm designating the last month of
-        of prices to be returned. If 'prior' (default) is specified, the month
-        prior to the current month is used.
+        of prices to be returned or 'prior'. If 'prior' (default) is specified,
+        the month prior to the current month is used.
     price_col (str): name of the price column to determine the value of on the
         last date of the month
     
@@ -48,8 +50,29 @@ def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='C
     
     # use df_id_oem to filter out all but last trading day of month
     df_eom = df_price.merge(df_id_eom, on='date')
-    df_eom = df_eom[['date', price_col]]
+    df_eom = df_eom[['date', price_col, 'year_mo']]
     
-    # filter between start_month and end_month TODO
+    # calc the prior month if needed
+    if end_month == 'prior':
+        # get the current month so we can calc the prior month
+        end_month = str(dt.today().year) + "-" + \
+                    str(dt.today().month - 1).zfill(2)
+    # filter between start_month and end_month
+    df_return = df_eom.loc[(df_eom['year_mo'] >= start_month) & \
+                           (df_eom['year_mo'] <= end_month), :]
     
-    return(df_eom)
+    return(df_return)
+
+
+def get_eomonth_sp500(start_month='2019-01', end_month='prior'):
+    """
+    
+    
+    
+    """
+    spx = yf.Ticker("^SPX")
+    df_ticker = spx.history(period="max", interval="1d",
+                            start="2019-01-01", end="2024-05-02",
+                            auto_adjust=True, rounding=True)
+    
+    return(None)
