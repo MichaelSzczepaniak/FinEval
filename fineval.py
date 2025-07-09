@@ -2,6 +2,53 @@ import numpy as np
 import pandas as pd
 from datetime import datetime as dt
 import yfinance as yfinance
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+
+def parse_vang_pdf(pdf_path, return_type='markdown'):
+    """ Parses a Vanguard monthly PDF statement and returns a result
+    specified by return_type (default is markdown)
+
+    Args:
+      pdf_path (str): path to the pdf statement file to be parsed
+      return_type (str): type of file to be returned (default: markdown)
+
+    Return:
+      str: the file specified by pdf_path in the format specified by
+      return_type
+
+    Prerequisites:
+        The following docling module must be available in the environment:
+        docling.document_converter.DocumentConverter
+        docling.document_converter.PdfFormatOption
+        docling.datamodel.base_models.InputFormat
+        docling.datamodel.pipeline_options.PdfPipelineOptions
+        docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend
+    """
+    
+    pipeline_options = PdfPipelineOptions(
+        do_ocr=False,  # Set True if you suspect any scanned/image pages
+        do_table_structure=True  # Enables table extraction
+    )
+
+    converter = DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(
+                pipeline_options=pipeline_options,
+                backend=PyPdfiumDocumentBackend
+            )
+        }
+    )
+
+    result = converter.convert(pdf_path)
+    result_converted = ""
+    if return_type == 'markdown':
+        result_converted = result.document.export_to_markdown()
+    # elif:  # TODO add other types
+
+    return result_converted
 
 def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='Close'):
     """
