@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
-from datetime import datetime as dt
 import yfinance as yfinance
+import re
+from datetime import datetime as dt
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+
 
 def parse_vang_pdf(pdf_path, return_type='markdown'):
     """ Parses a Vanguard monthly PDF statement and returns a result
@@ -49,6 +51,45 @@ def parse_vang_pdf(pdf_path, return_type='markdown'):
     # elif:  # TODO add other types
 
     return result_converted
+
+def get_vang_stock_table_segs(report_lines,
+                              file_type = 'markdown',
+                              header_regex = r"^[|]\s+Symbol\s+[|]\s+Name\s+[|]\s+Quantity\s+[|]\s+Price on "):
+    """ Finds the row numbers of the start and end of each stock table segment in report_lines
+
+    Args:
+      report_lines (list[str]): list of strings that are lines from the parsed pdf report
+      file_type (str): file type to be processed, default: markdown
+      header_regex (str): regular expression identifying the header row of each stock table segment
+        in the statement
+
+    Returns:
+      tuple of 2-tuples: First item in each tuple is the row number of first row
+      of a stock table segment. Second item in each tuple is the row number of the
+      last row of a stock table segment
+    """
+    last_line_table_seg = []
+    stock_table_headers = []
+    stock_table_last_lines = []
+    found_table_header = False
+    found_table_end = None
+    for position, line in enumerate(report_lines):
+        header_search_result = re.search(header_regex, line)
+        if header_search_result is not None:                # found table header
+            found_table_header = True
+            stock_table_headers.append((position, header_search_result))
+        elif found_table_header and line.startswith("| "):  # row of table segment
+            continue
+        elif found_table_header and len(line) == 0:         # empty line after table
+            stock_table_last_lines.append(position - 1)
+            found_table_header = False  # look for next segment
+
+    header_indices = [x[0] for x in stock_table_headers]
+    # print(f"header rows of table segments: {header_indices}")
+    # print(f"last rows of table segments: {stock_table_last_lines}")   
+    table_segs = tuple(zip(header_indices, stock_table_last_lines))
+
+    return table_segs
 
 def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='Close'):
     """
