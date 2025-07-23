@@ -22,7 +22,7 @@ def parse_vang_pdf(pdf_path, return_type='markdown'):
       return_type
 
     Prerequisites:
-        The following docling module must be available in the environment:
+        The following docling modules must be available in the environment:
         docling.document_converter.DocumentConverter
         docling.document_converter.PdfFormatOption
         docling.datamodel.base_models.InputFormat
@@ -51,6 +51,36 @@ def parse_vang_pdf(pdf_path, return_type='markdown'):
     # elif:  # TODO add other types
 
     return result_converted
+
+def get_vang_statement_date(parsed_statement_as_markdown,
+                            id_text=", quarter-to-date statement"):
+    """ Extracts the end-of-month statement date from a Vanguard monthly PDF
+    statement that has been parsed into markdown format.
+    
+    Args:
+      parsed_statement_as_markdown (str): Vanguard statement parsed into 
+        markdown format
+      id_test (str): statement text identifying the line which the statement
+        date resides
+    Returns:
+      str: end-of-month statement date in YYYY-MM-DD format
+    
+    """
+    report_lines = parsed_statement_as_markdown.split('\n')
+    statement_date_line = "DATE NOT FOUND!!!"
+    for line in report_lines:
+        line_has_date = id_text in line
+        if line_has_date:
+            statement_date_line = line
+            break
+
+    # get the date in YYYY-MM-DD format
+    statement_date = statement_date_line.replace(id_text, "")
+    statement_date = dt.strptime(statement_date.replace("## ", ""), "%B %d, %Y")
+    statement_date = statement_date.strftime("%Y-%m-%d")
+
+    return statement_date
+
 
 def get_vang_stock_table_segs(report_lines,
                               file_type = 'markdown',
