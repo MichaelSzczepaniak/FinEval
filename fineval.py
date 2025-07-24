@@ -52,6 +52,7 @@ def parse_vang_pdf(pdf_path, return_type='markdown'):
 
     return result_converted
 
+
 def get_vang_statement_date(parsed_statement_as_markdown,
                             id_text=", quarter-to-date statement"):
     """ Extracts the end-of-month statement date from a Vanguard monthly PDF
@@ -120,6 +121,40 @@ def get_vang_stock_table_segs(report_lines,
     table_segs = tuple(zip(header_indices, stock_table_last_lines))
 
     return table_segs
+
+
+def make_vang_stock_record_dict(row_string, delimiter='|'):
+    """ Converts a delimited string into a record dict which can
+    then be used build a data frame
+
+    Args:
+      row_string (str): record of a security holding in the statement
+      delimiter (str): delimiter used to separate values in row_string
+
+    Returns:
+      dict: with the following keys representing a field in the record:
+        statement_date - date of last day in the statement formatted YYYY-MM-DD
+        symbol - ticker symbol for the security
+        name - name of the security
+        quantity - number of shares held
+        price_statement_eom - price on the last day of statement
+        balance_statement_eom - number of shares of security held on statement_date
+    
+    """
+    table_line_tokens = row_string.split('|')
+    # parse row into record dict
+    table_row_dict = {
+        "statement_date": table_line_tokens[0],
+        "symbol": table_line_tokens[1],
+        "name": table_line_tokens[2],
+        "quantity": table_line_tokens[3],
+        "price_statement_eom": table_line_tokens[4],
+        "balance_statement_eom": table_line_tokens[6]
+    }
+
+    return table_row_dict
+
+
 
 def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='Close'):
     """
