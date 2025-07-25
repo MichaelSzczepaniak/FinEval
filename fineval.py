@@ -54,7 +54,7 @@ def parse_vang_pdf(pdf_path, return_type='markdown'):
 
 
 def get_vang_statement_date(parsed_statement_as_markdown,
-                            id_text=", quarter-to-date statement"):
+                            id_text="Total value of all accounts as of "):
     """ Extracts the end-of-month statement date from a Vanguard monthly PDF
     statement that has been parsed into markdown format.
     
@@ -77,7 +77,7 @@ def get_vang_statement_date(parsed_statement_as_markdown,
 
     # get the date in YYYY-MM-DD format
     statement_date = statement_date_line.replace(id_text, "")
-    statement_date = dt.strptime(statement_date.replace("## ", ""), "%B %d, %Y")
+    statement_date = dt.strptime(statement_date, "%B %d, %Y")
     statement_date = statement_date.strftime("%Y-%m-%d")
 
     return statement_date
@@ -99,7 +99,7 @@ def get_vang_stock_table_segs(report_lines,
       of a stock table segment. Second item in each tuple is the row number of the
       last row of a stock table segment
     """
-    last_line_table_seg = []
+    # last_line_table_seg = []
     stock_table_headers = []
     stock_table_last_lines = []
     found_table_header = False
@@ -109,10 +109,14 @@ def get_vang_stock_table_segs(report_lines,
         if header_search_result is not None:                # found table header
             found_table_header = True
             stock_table_headers.append((position, header_search_result))
-        elif found_table_header and line.startswith("| "):  # row of table segment
+        elif found_table_header and re.match(r"^[|]\s[A-Z]+", line):  # row of table segment
             continue
-        elif found_table_header and len(line) == 0:         # empty line after table
+        elif found_table_header and re.match(r"^[|]\s{2,}", line):  # last row with totals
             stock_table_last_lines.append(position - 1)
+            break
+        elif found_table_header and len(line) == 0:         # empty line after non-terminal table segment
+            # stock_table_last_lines.append(position - 1)
+            stock_table_last_lines.append(position)
             found_table_header = False  # look for next segment
 
     header_indices = [x[0] for x in stock_table_headers]
@@ -144,12 +148,12 @@ def make_vang_stock_record_dict(row_string, delimiter='|'):
     table_line_tokens = row_string.split('|')
     # parse row into record dict
     table_row_dict = {
-        "statement_date": table_line_tokens[0],
         "symbol": table_line_tokens[1],
         "name": table_line_tokens[2],
-        "quantity": table_line_tokens[3],
-        "price_statement_eom": table_line_tokens[4],
-        "balance_statement_eom": table_line_tokens[6]
+        "quantity": float(table_line_tokens[3]),
+        "price_statement_eom": float(table_line_tokens[4]),
+        "statement_date": table_line_tokens[0],
+        "balance_statement_eom": float(table_line_tokens[6])
     }
 
     return table_row_dict
