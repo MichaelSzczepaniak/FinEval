@@ -184,7 +184,42 @@ def make_vang_stock_record_dict(row_string, delimiter='|'):
     return table_row_dict
 
 
+def convert_md_table_rows_to_table_recs(table_lines, statement_date, record_function):
+    """ Converts a list of stings representing rows in a table to dicts
+    representing records in a data frame.
 
+    Args:
+      table_lines (list[str]):
+      statement_date (str): date of last day in the statement formatted YYYY-MM-DD
+      record_function (function): function which takes a list of strings
+        representing rows in a dataframe and returns a list of dicts
+        representing records in the dataframe
+
+    Returns:
+      list[dict]: each dict in the list represents a record or row in a dataframe
+      with each dict key being a column name and each dict value being a value
+      for that column
+    
+    """
+    table_row_recs = []
+    # clean up the rows
+    for j in range(len(table_lines)):
+        # remove the commas
+        table_line = table_lines[j].replace(',', '')
+        # remove the $ chars
+        table_line = table_line.replace('$', '')
+        # left justify values
+        table_line = re.sub(r'[|]\s+', '|', table_line)
+        # remove extra spaces right of the values
+        table_line = re.sub(r'\s+[|]', '|', table_line)
+        # add the statement date
+        table_line = statement_date + table_line
+        # parse row into a record dict
+    
+        table_row = record_function(table_line)
+        table_row_recs.append(table_row)
+
+    return table_row_recs
 
 
 def get_eomonth_price(df, start_month='2019-01', end_month='prior', price_col='Close'):
