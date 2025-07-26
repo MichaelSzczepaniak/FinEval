@@ -86,7 +86,8 @@ def get_vang_statement_date(parsed_statement_as_markdown,
 def get_vang_stock_table_segs(report_lines,
                               file_type = 'markdown',
                               header_regex = r"^[|]\s+Symbol\s+[|]\s+Name\s+[|]\s+Quantity\s+[|]\s+Price on "):
-    """ Finds the row numbers of the start and end of each stock table segment in report_lines
+    """ Finds the row numbers of the start and end of each STOCK table segment
+    in report_lines
 
     Args:
       report_lines (list[str]): list of strings that are lines from the parsed pdf report
@@ -99,11 +100,9 @@ def get_vang_stock_table_segs(report_lines,
       of a stock table segment. Second item in each tuple is the row number of the
       last row of a stock table segment
     """
-    # last_line_table_seg = []
     stock_table_headers = []
     stock_table_last_lines = []
     found_table_header = False
-    found_table_end = None
     for position, line in enumerate(report_lines):
         header_search_result = re.search(header_regex, line)
         if header_search_result is not None:                # found table header
@@ -123,6 +122,48 @@ def get_vang_stock_table_segs(report_lines,
     # print(f"header rows of table segments: {header_indices}")
     # print(f"last rows of table segments: {stock_table_last_lines}")   
     table_segs = tuple(zip(header_indices, stock_table_last_lines))
+
+    return table_segs
+
+
+def get_vang_trans_table_segs(report_lines,
+                              file_type = 'markdown',
+                              header_regex = r"^[|]\s+Settlement\sdate\s+[|]\s+Trade\sdate\s+[|]\s+Symbol"):
+    """ Finds the row numbers of the start and end of each TRANSACTION table
+    segment in report_lines
+
+    Args:
+      report_lines (list[str]): list of strings that are lines from the parsed pdf report
+      file_type (str): file type to be processed, default: markdown
+      header_regex (str): regular expression identifying the header row of each
+        transaction table segment in the statement
+
+    Returns:
+      tuple of 2-tuples: First item in each tuple is the row number of first row
+      of a transaction table segment. Second item in each tuple is the row
+      number of the last row of a transaction table segment
+    """
+    trans_table_headers = []
+    trans_table_last_lines = []
+    found_table_header = False
+    for position, line in enumerate(report_lines):
+        header_search_result = re.search(header_regex, line)
+        if header_search_result is not None:                # found table header
+            found_table_header = True
+            trans_table_headers.append((position, header_search_result))
+        elif found_table_header and re.match(r"^[|]\s\d+", line):   # row of table segment
+            continue
+        # terminal transaction segment just has an empty line after last row
+        elif found_table_header and len(line.strip()) == 0:  # empty line after
+                                                             # non-terminal table segment
+            # trans_table_last_lines.append(position - 1)
+            trans_table_last_lines.append(position)
+            found_table_header = False  # look for next segment
+
+    header_indices = [x[0] for x in trans_table_headers]
+    # print(f"header rows of table segments: {header_indices}")
+    # print(f"last rows of table segments: {trans_table_last_lines}")   
+    table_segs = tuple(zip(header_indices, trans_table_last_lines))
 
     return table_segs
 
@@ -153,7 +194,7 @@ def consolidate_md_table_chunks(report_lines, table_markers):
 
 
 def make_vang_stock_record_dict(row_string, delimiter='|'):
-    """ Converts a delimited string into a record dict which can
+    """ Converts a delimited string into a stock table record dict which can
     then be used to build a row (record) of a data frame
 
     Args:
@@ -180,6 +221,39 @@ def make_vang_stock_record_dict(row_string, delimiter='|'):
         "statement_date": table_line_tokens[0],
         "balance_statement_eom": float(table_line_tokens[6])
     }
+
+    return table_row_dict
+
+# TODO
+def make_vang_trans_record_dict(row_string, delimiter='|'):
+    """ Converts a delimited string into a transaction table record dict which
+    can then be used to build a row (record) of a data frame
+
+    Args:
+      row_string (str): record of a security transaction in the statement
+      delimiter (str): delimiter used to separate values in row_string
+
+    Returns:
+      dict: with the following keys representing a field in the record:
+        statement_date - date of last day in the statement formatted YYYY-MM-DD
+        symbol - ticker symbol for the security
+        name - name of the security
+        quantity - number of shares held
+        price_statement_eom - price on the last day of statement
+        balance_statement_eom - number of shares of security held on statement_date
+    
+    """
+    table_line_tokens = row_string.split('|')
+    # parse row into record dict: TODO
+    table_row_dict = {}
+    # table_row_dict = {
+    #     "": table_line_tokens[1],
+    #     "": table_line_tokens[2],
+    #     "": float(table_line_tokens[3]),
+    #     "": float(table_line_tokens[4]),
+    #     "": table_line_tokens[0],
+    #     "": float(table_line_tokens[6])
+    # }
 
     return table_row_dict
 
