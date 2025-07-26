@@ -127,9 +127,34 @@ def get_vang_stock_table_segs(report_lines,
     return table_segs
 
 
+def consolidate_md_table_chunks(report_lines, table_markers):
+    """ Creates a list of strings where each item is a row in a table
+    consolidated from chunks defined by line numbers in table_markers
+
+    Args:
+      report_lines (list[str]): each string in the list is a single line from a report
+      table_markers (tuple(tuple(int))): tuple of 2-tuples where each 2-tuple consists of
+        2 ints. The first int is the index of the first row a table segment. The second
+        int is the index of the last row of a table segment
+
+    Returns:
+      list[str]: each string in the list is a row in the consolidated table
+    
+    """
+    table_lines = []
+    for markers in table_markers:
+        # print(f"{markers[0]}, {markers[1]}")
+        start_index = markers[0] + 2
+        end_index = markers[1]
+        for i in range(start_index, end_index):
+            table_lines.append(report_lines[i])
+
+    return table_lines
+
+
 def make_vang_stock_record_dict(row_string, delimiter='|'):
     """ Converts a delimited string into a record dict which can
-    then be used build a data frame
+    then be used to build a row (record) of a data frame
 
     Args:
       row_string (str): record of a security holding in the statement
@@ -157,6 +182,8 @@ def make_vang_stock_record_dict(row_string, delimiter='|'):
     }
 
     return table_row_dict
+
+
 
 
 
