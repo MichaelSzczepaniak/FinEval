@@ -224,7 +224,7 @@ def make_vang_stock_record_dict(row_string, delimiter='|'):
 
     return table_row_dict
 
-# TODO
+
 def make_vang_trans_record_dict(row_string, delimiter='|'):
     """ Converts a delimited string into a transaction table record dict which
     can then be used to build a row (record) of a data frame
@@ -244,16 +244,28 @@ def make_vang_trans_record_dict(row_string, delimiter='|'):
     
     """
     table_line_tokens = row_string.split('|')
-    # parse row into record dict: TODO
-    table_row_dict = {}
-    # table_row_dict = {
-    #     "": table_line_tokens[1],
-    #     "": table_line_tokens[2],
-    #     "": float(table_line_tokens[3]),
-    #     "": float(table_line_tokens[4]),
-    #     "": table_line_tokens[0],
-    #     "": float(table_line_tokens[6])
-    # }
+    # deal with -'s in Quantity and Price columns
+    if table_line_tokens[7] == '-':
+        table_line_tokens[7] = '0'
+    if table_line_tokens[8] == '-':
+        table_line_tokens[8] = '0'
+    # convert settlement date to yyyy-mm-dd
+    settlement_year = table_line_tokens[0][0:4]
+    settlement_date_tokens = table_line_tokens[1].split('/')
+    table_line_tokens[1] = settlement_year + '-' + settlement_date_tokens[0] + \
+                           '-' + settlement_date_tokens[1]
+    
+    # parse row into record dict: remember that convert_md_rows... adds
+    # statement_date as 1st column so each index is +1 difference from md file
+    table_row_dict = {
+        "settlement_date": table_line_tokens[1],
+        "symbol": table_line_tokens[3],
+        "name": table_line_tokens[4],
+        "transaction_type": table_line_tokens[5],
+        "quantity": float(table_line_tokens[7]),
+        "price": float(table_line_tokens[8]),
+        "amount": float(table_line_tokens[10])
+    }
 
     return table_row_dict
 
